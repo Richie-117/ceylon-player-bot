@@ -103,8 +103,7 @@ client.on("interactionCreate", async interaction => {
 
                     return `\`${p.id}\` ${pingEmoji} **${p.name}** — ${p.ping}ms`;
 
-                }).join("
-")
+                }).join("\n")
                 : "❌ No players online";
 
             const embed = new EmbedBuilder()
