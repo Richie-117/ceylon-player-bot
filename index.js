@@ -6,7 +6,8 @@ const {
     EmbedBuilder,
     SlashCommandBuilder,
     REST,
-    Routes
+    Routes,
+    ActivityType
 } = require("discord.js");
 
 const axios = require("axios");
@@ -19,6 +20,11 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const SERVER_ID = process.env.SERVER_ID;
 
+if (!TOKEN || !CLIENT_ID || !SERVER_ID) {
+    console.log("❌ Missing environment variables.");
+    process.exit(1);
+}
+
 // =========================
 // DISCORD CLIENT
 // =========================
@@ -28,7 +34,7 @@ const client = new Client({
 });
 
 // =========================
-// REGISTER SLASH COMMANDS
+// REGISTER COMMANDS
 // =========================
 
 async function registerCommands() {
@@ -37,13 +43,11 @@ async function registerCommands() {
 
         new SlashCommandBuilder()
             .setName("players")
-            .setDescription("Show online players")
-            .toJSON(),
+            .setDescription("Show online players"),
 
         new SlashCommandBuilder()
             .setName("server")
-            .setDescription("Show server information")
-            .toJSON(),
+            .setDescription("Show server information"),
 
         new SlashCommandBuilder()
             .setName("playerinfo")
@@ -51,66 +55,68 @@ async function registerCommands() {
             .addIntegerOption(option =>
                 option
                     .setName("id")
-                    .setDescription("Server player ID")
+                    .setDescription("Player server ID")
                     .setRequired(true)
             )
-            .toJSON()
 
-    ];
+    ].map(cmd => cmd.toJSON());
 
     const rest = new REST({ version: "10" }).setToken(TOKEN);
 
     try {
 
-        console.log("Registering slash commands...");
+        console.log("🔄 Registering slash commands...");
 
         await rest.put(
             Routes.applicationCommands(CLIENT_ID),
             { body: commands }
         );
 
-        console.log("Slash commands registered.");
+        console.log("✅ Slash commands registered.");
 
-    } catch (err) {
+    } catch (error) {
 
-        console.error(err);
+        console.error("❌ Slash command error:", error);
 
     }
 
 }
 
 // =========================
-// FETCH FIVEM DATA
+// FETCH SERVER DATA
 // =========================
 
 async function fetchServerData() {
 
-    const res = await axios.get(
-        `https://servers-frontend.fivem.net/api/servers/single/${SERVER_ID}`
+    const response = await axios.get(
+        `https://servers-frontend.fivem.net/api/servers/single/${SERVER_ID}`,
+        {
+            timeout: 10000
+        }
     );
 
-    return res.data.Data;
+    return response.data.Data;
 
 }
 
 // =========================
-// READY EVENT
+// BOT READY
 // =========================
 
 client.once("ready", async () => {
 
-    console.log(`Logged in as ${client.user.tag}`);
+    console.log(`✅ Logged in as ${client.user.tag}`);
 
     await registerCommands();
 
-    client.user.setActivity("Ceylon Roleplay", {
-        type: 3
+    client.user.setActivity("FiveM Server", {
+        type: ActivityType.Watching
     });
 
 });
 
 // =========================
-// COMMAND HANDLER
+// INTERACTIONS
 // =========================
 
 client.on("interactionCreate", async interaction => {
@@ -131,47 +137,48 @@ client.on("interactionCreate", async interaction => {
 
             const players = data.players || [];
 
-            const playerText = players.length
-                ? players.map(p => {
+            let description = "❌ No players online.";
 
-                    let pingEmoji = "🟢";
+            if (players.length > 0) {
 
-                    if (p.ping > 80) pingEmoji = "🟡";
-                    if (p.ping > 150) pingEmoji = "🔴";
+                description = players.map(player => {
 
-                    return `\`${p.id}\` ${pingEmoji} **${p.name}** — ${p.ping}ms`;
+                    let ping = "🟢";
 
-                }).join("\n")
-                : "❌ No players online";
+                    if (player.ping > 80) ping = "🟡";
+                    if (player.ping > 150) ping = "🔴";
+
+                    return `\`${player.id}\` ${ping} **${player.name}** • ${player.ping}ms`;
+
+                }).join("\n");
+
+            }
 
             const embed = new EmbedBuilder()
-                .setTitle("🌴 Ceylon Roleplay Players")
-                .setDescription(playerText)
+                .setColor(0x00ff99)
+                .setTitle("👥 Online Players")
+                .setDescription(description.substring(0, 4000))
                 .addFields(
                     {
-                        name: "👥 Players",
-                        value: `\`${players.length}/${data.sv_maxclients}\``,
+                        name: "Players",
+                        value: `${players.length}/${data.sv_maxclients}`,
                         inline: true
                     },
                     {
-                        name: "📡 Status",
+                        name: "Status",
                         value: "🟢 Online",
                         inline: true
                     }
                 )
-                .setColor(0x00ff99)
-                .setFooter({
-                    text: "🇱🇰 Ceylon Roleplay"
-                })
                 .setTimestamp();
 
             await interaction.editReply({
                 embeds: [embed]
             });
 
-        } catch (err) {
+        } catch (error) {
 
-            console.error(err);
+            console.error(error);
 
             await interaction.editReply(
                 "❌ Failed to fetch players."
@@ -194,51 +201,48 @@ client.on("interactionCreate", async interaction => {
             const data = await fetchServerData();
 
             const embed = new EmbedBuilder()
+                .setColor(0x0099ff)
                 .setTitle("🖥️ Server Information")
-                .setDescription(`🌴 **${data.hostname}**`)
+                .setDescription(`${data.hostname}`)
                 .addFields(
                     {
-                        name: "👥 Players",
-                        value: `\`${data.clients}/${data.sv_maxclients}\``,
+                        name: "Players",
+                        value: `${data.clients}/${data.sv_maxclients}`,
                         inline: true
                     },
                     {
-                        name: "🎮 Gametype",
+                        name: "Gametype",
                         value: data.gametype || "Unknown",
                         inline: true
                     },
                     {
-                        name: "🗺️ Map",
+                        name: "Map",
                         value: data.mapname || "Unknown",
                         inline: true
                     },
                     {
-                        name: "📦 Resources",
-                        value: `\`${data.resources?.length || 0}\``,
+                        name: "Resources",
+                        value: `${data.resources?.length || 0}`,
                         inline: true
                     },
                     {
-                        name: "🌐 Connect",
-                        value: `cfx.re/join/${SERVER_ID}`,
+                        name: "Join",
+                        value: `https://cfx.re/join/${SERVER_ID}`,
                         inline: false
                     }
                 )
-                .setColor(0x0099ff)
-                .setFooter({
-                    text: "FiveM Server Status"
-                })
                 .setTimestamp();
 
             await interaction.editReply({
                 embeds: [embed]
             });
 
-        } catch (err) {
+        } catch (error) {
 
-            console.error(err);
+            console.error(error);
 
             await interaction.editReply(
-                "❌ Failed to fetch server info."
+                "❌ Failed to fetch server information."
             );
 
         }
@@ -255,13 +259,13 @@ client.on("interactionCreate", async interaction => {
 
         try {
 
-            const playerId = interaction.options.getInteger("id");
+            const id = interaction.options.getInteger("id");
 
             const data = await fetchServerData();
 
             const players = data.players || [];
 
-            const player = players.find(p => p.id === playerId);
+            const player = players.find(p => p.id === id);
 
             if (!player) {
 
@@ -272,36 +276,32 @@ client.on("interactionCreate", async interaction => {
             }
 
             const embed = new EmbedBuilder()
+                .setColor(0xff9900)
                 .setTitle("🎮 Player Information")
                 .addFields(
                     {
-                        name: "🪪 Name",
+                        name: "Name",
                         value: player.name,
                         inline: true
                     },
                     {
-                        name: "🆔 Server ID",
-                        value: `\`${player.id}\``,
+                        name: "ID",
+                        value: `${player.id}`,
                         inline: true
                     },
                     {
-                        name: "📶 Ping",
-                        value: `\`${player.ping}ms\``,
+                        name: "Ping",
+                        value: `${player.ping}ms`,
                         inline: true
                     }
                 )
-                .setColor(0xff9900)
-                .setFooter({
-                    text: "FiveM Player Lookup"
-                })
                 .setTimestamp();
 
-            if (player.identifiers && player.identifiers.length > 0) {
+            if (player.identifiers?.length) {
 
                 embed.addFields({
-                    name: "🔗 Identifiers",
-                    value: `\`\`\`${player.identifiers.join("\n")}\`\`\``,
-                    inline: false
+                    name: "Identifiers",
+                    value: `\`\`\`\n${player.identifiers.join("\n")}\n\`\`\``
                 });
 
             }
@@ -310,9 +310,9 @@ client.on("interactionCreate", async interaction => {
                 embeds: [embed]
             });
 
-        } catch (err) {
+        } catch (error) {
 
-            console.error(err);
+            console.error(error);
 
             await interaction.editReply(
                 "❌ Failed to fetch player info."
