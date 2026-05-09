@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const {
     Client,
     GatewayIntentBits,
@@ -11,21 +9,51 @@ const {
 
 const axios = require("axios");
 
+// =========================
+// CONFIG
+// =========================
+
+const TOKEN = "MTUwMjY3NjQ2ODg0NzYxMTkzNA.GpPKge.Hsqcq5e5eJb2MghbWnt_5ZRQH2FigP3WwKJmbE";
+const CLIENT_ID = "1502676468847611934";
+const SERVER_ID = "r6r5mg";
+
+// =========================
+// BOT SETUP
+// =========================
+
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
 
-const TOKEN = process.env.DISCORD_TOKEN;
-const SERVER_ID = process.env.SERVER_ID;
-const CLIENT_ID = process.env.CLIENT_ID;
+// =========================
+// REGISTER COMMANDS
+// =========================
 
 async function registerCommands() {
 
     const commands = [
+
         new SlashCommandBuilder()
             .setName("players")
-            .setDescription("Show online FiveM players")
+            .setDescription("Show online players")
+            .toJSON(),
+
+        new SlashCommandBuilder()
+            .setName("server")
+            .setDescription("Show server information")
+            .toJSON(),
+
+        new SlashCommandBuilder()
+            .setName("playerinfo")
+            .setDescription("Get player info by server ID")
+            .addIntegerOption(option =>
+                option
+                    .setName("id")
+                    .setDescription("Server player ID")
+                    .setRequired(true)
+            )
             .toJSON()
+
     ];
 
     const rest = new REST({ version: "10" }).setToken(TOKEN);
@@ -39,7 +67,7 @@ async function registerCommands() {
             { body: commands }
         );
 
-        console.log("Slash commands registered.");
+        console.log("Commands registered.");
 
     } catch (err) {
 
@@ -49,6 +77,10 @@ async function registerCommands() {
 
 }
 
+// =========================
+// READY EVENT
+// =========================
+
 client.once("ready", async () => {
 
     console.log(`Logged in as ${client.user.tag}`);
@@ -57,9 +89,31 @@ client.once("ready", async () => {
 
 });
 
+// =========================
+// FETCH SERVER DATA
+// =========================
+
+async function fetchServerData() {
+
+    const res = await axios.get(
+        `https://servers-frontend.fivem.net/api/servers/single/${SERVER_ID}`
+    );
+
+    return res.data.Data;
+
+}
+
+// =========================
+// INTERACTIONS
+// =========================
+
 client.on("interactionCreate", async interaction => {
 
     if (!interaction.isChatInputCommand()) return;
+
+    // =========================
+    // /PLAYERS
+    // =========================
 
     if (interaction.commandName === "players") {
 
@@ -67,41 +121,42 @@ client.on("interactionCreate", async interaction => {
 
         try {
 
-            const res = await axios.get(
-                `https://servers-frontend.fivem.net/api/servers/single/${SERVER_ID}`
-            );
-
-            const data = res.data.Data;
+            const data = await fetchServerData();
 
             const players = data.players || [];
 
             const playerText = players.length
-                ? players.map((p, i) =>
-                    `\`${i + 1}.\` 🎮 ${p.name}`
-                ).join("\n")
+                ? players.map(p => {
+
+                    let pingEmoji = "🟢";
+
+                    if (p.ping > 80) pingEmoji = "🟡";
+                    if (p.ping > 150) pingEmoji = "🔴";
+
+                    return `\`${p.id}\` ${pingEmoji} **${p.name}** — ${p.ping}ms`;
+
+                }).join("\n")
                 : "❌ No players online";
 
             const embed = new EmbedBuilder()
-                .setTitle("Ceylon Roleplay Server 💙")
-                .setDescription(
-                    `👥 **Online Players List**\n\n${playerText}`
-                )
+                .setTitle("🌴 Ceylon Roleplay Players")
+                .setDescription(playerText)
                 .addFields(
                     {
-                        name: "📊 Server Status",
-                        value: "🟢 Online",
+                        name: "👥 Players",
+                        value: `\`${players.length}/${data.sv_maxclients}\``,
                         inline: true
                     },
                     {
-                        name: "👤 Player Count",
-                        value: `\`${players.length}/${data.sv_maxclients}\``,
+                        name: "📡 Status",
+                        value: "🟢 Online",
                         inline: true
                     }
                 )
-                .setFooter({
-                    text: "Developed By • Richie"
-                })
                 .setColor(0x00ff99)
+                .setFooter({
+                    text: "🇱🇰 Ceylon Roleplay"
+                })
                 .setTimestamp();
 
             await interaction.editReply({
@@ -112,14 +167,154 @@ client.on("interactionCreate", async interaction => {
 
             console.error(err);
 
-            await interaction.editReply(
-                "❌ Failed to fetch player list."
-            );
+            await interaction.editReply("❌ Failed to fetch players.");
+
+        }
+
+    }
+
+    // =========================
+    // /SERVER
+    // =========================
+
+    if (interaction.commandName === "server") {
+
+        await interaction.deferReply();
+
+        try {
+
+            const data = await fetchServerData();
+
+            const embed = new EmbedBuilder()
+                .setTitle("🖥️ Server Information")
+                .setDescription(`🌴 **${data.hostname}**`)
+                .addFields(
+                    {
+                        name: "👥 Players",
+                        value: `\`${data.clients}/${data.sv_maxclients}\``,
+                        inline: true
+                    },
+                    {
+                        name: "🎮 Gametype",
+                        value: data.gametype || "Unknown",
+                        inline: true
+                    },
+                    {
+                        name: "🗺️ Map",
+                        value: data.mapname || "Unknown",
+                        inline: true
+                    },
+                    {
+                        name: "📦 Resources",
+                        value: `\`${data.resources?.length || 0}\``,
+                        inline: true
+                    },
+                    {
+                        name: "🌐 Connect",
+                        value: `cfx.re/join/${SERVER_ID}`,
+                        inline: false
+                    }
+                )
+                .setColor(0x0099ff)
+                .setFooter({
+                    text: "FiveM Server Status"
+                })
+                .setTimestamp();
+
+            await interaction.editReply({
+                embeds: [embed]
+            });
+
+        } catch (err) {
+
+            console.error(err);
+
+            await interaction.editReply("❌ Failed to fetch server info.");
+
+        }
+
+    }
+
+    // =========================
+    // /PLAYERINFO
+    // =========================
+
+    if (interaction.commandName === "playerinfo") {
+
+        await interaction.deferReply();
+
+        try {
+
+            const playerId = interaction.options.getInteger("id");
+
+            const data = await fetchServerData();
+
+            const players = data.players || [];
+
+            const player = players.find(p => p.id === playerId);
+
+            if (!player) {
+
+                return interaction.editReply(
+                    "❌ Player not found."
+                );
+
+            }
+
+            const embed = new EmbedBuilder()
+                .setTitle("🎮 Player Information")
+                .addFields(
+                    {
+                        name: "🪪 Name",
+                        value: player.name,
+                        inline: true
+                    },
+                    {
+                        name: "🆔 Server ID",
+                        value: `\`${player.id}\``,
+                        inline: true
+                    },
+                    {
+                        name: "📶 Ping",
+                        value: `\`${player.ping}ms\``,
+                        inline: true
+                    }
+                )
+                .setColor(0xff9900)
+                .setFooter({
+                    text: "FiveM Player Lookup"
+                })
+                .setTimestamp();
+
+            // Optional identifiers
+            if (player.identifiers && player.identifiers.length > 0) {
+
+                embed.addFields({
+                    name: "🔗 Identifiers",
+                    value: `\`\`\`${player.identifiers.join("\n")}\`\`\``,
+                    inline: false
+                });
+
+            }
+
+            await interaction.editReply({
+                embeds: [embed]
+            });
+
+        } catch (err) {
+
+            console.error(err);
+
+            await interaction.editReply("❌ Failed to fetch player info.");
 
         }
 
     }
 
 });
+
+// =========================
+// LOGIN
+// =========================
 
 client.login(TOKEN);
