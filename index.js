@@ -2,7 +2,7 @@ require("dotenv").config();
 
 const {
     Client,
-       GatewayIntentBits,
+    GatewayIntentBits,
     EmbedBuilder,
     SlashCommandBuilder,
     REST,
@@ -11,13 +11,25 @@ const {
 
 const axios = require("axios");
 
+// =========================
+// ENV VARIABLES
+// =========================
+
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const SERVER_ID = process.env.SERVER_ID;
 
+// =========================
+// DISCORD CLIENT
+// =========================
+
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
+
+// =========================
+// REGISTER SLASH COMMANDS
+// =========================
 
 async function registerCommands() {
 
@@ -48,14 +60,28 @@ async function registerCommands() {
 
     const rest = new REST({ version: "10" }).setToken(TOKEN);
 
-    await rest.put(
-        Routes.applicationCommands(CLIENT_ID),
-        { body: commands }
-    );
+    try {
 
-    console.log("Slash commands registered.");
+        console.log("Registering slash commands...");
+
+        await rest.put(
+            Routes.applicationCommands(CLIENT_ID),
+            { body: commands }
+        );
+
+        console.log("Slash commands registered.");
+
+    } catch (err) {
+
+        console.error(err);
+
+    }
 
 }
+
+// =========================
+// FETCH FIVEM DATA
+// =========================
 
 async function fetchServerData() {
 
@@ -66,6 +92,10 @@ async function fetchServerData() {
     return res.data.Data;
 
 }
+
+// =========================
+// READY EVENT
+// =========================
 
 client.once("ready", async () => {
 
@@ -79,9 +109,17 @@ client.once("ready", async () => {
 
 });
 
+// =========================
+// COMMAND HANDLER
+// =========================
+
 client.on("interactionCreate", async interaction => {
 
     if (!interaction.isChatInputCommand()) return;
+
+    // =========================
+    // /PLAYERS
+    // =========================
 
     if (interaction.commandName === "players") {
 
@@ -135,11 +173,17 @@ client.on("interactionCreate", async interaction => {
 
             console.error(err);
 
-            await interaction.editReply("❌ Failed to fetch players.");
+            await interaction.editReply(
+                "❌ Failed to fetch players."
+            );
 
         }
 
     }
+
+    // =========================
+    // /SERVER
+    // =========================
 
     if (interaction.commandName === "server") {
 
@@ -193,11 +237,17 @@ client.on("interactionCreate", async interaction => {
 
             console.error(err);
 
-            await interaction.editReply("❌ Failed to fetch server info.");
+            await interaction.editReply(
+                "❌ Failed to fetch server info."
+            );
 
         }
 
     }
+
+    // =========================
+    // /PLAYERINFO
+    // =========================
 
     if (interaction.commandName === "playerinfo") {
 
@@ -215,7 +265,9 @@ client.on("interactionCreate", async interaction => {
 
             if (!player) {
 
-                return interaction.editReply("❌ Player not found.");
+                return interaction.editReply(
+                    "❌ Player not found."
+                );
 
             }
 
@@ -244,6 +296,16 @@ client.on("interactionCreate", async interaction => {
                 })
                 .setTimestamp();
 
+            if (player.identifiers && player.identifiers.length > 0) {
+
+                embed.addFields({
+                    name: "🔗 Identifiers",
+                    value: `\`\`\`${player.identifiers.join("\n")}\`\`\``,
+                    inline: false
+                });
+
+            }
+
             await interaction.editReply({
                 embeds: [embed]
             });
@@ -252,12 +314,18 @@ client.on("interactionCreate", async interaction => {
 
             console.error(err);
 
-            await interaction.editReply("❌ Failed to fetch player info.");
+            await interaction.editReply(
+                "❌ Failed to fetch player info."
+            );
 
         }
 
     }
 
 });
+
+// =========================
+// LOGIN
+// =========================
 
 client.login(TOKEN);
