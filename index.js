@@ -1,6 +1,8 @@
+require("dotenv").config();
+
 const {
     Client,
-    GatewayIntentBits,
+       GatewayIntentBits,
     EmbedBuilder,
     SlashCommandBuilder,
     REST,
@@ -9,25 +11,13 @@ const {
 
 const axios = require("axios");
 
-// =========================
-// CONFIG
-// =========================
-
-const TOKEN = "MTUwMjY3NjQ2ODg0NzYxMTkzNA.GpPKge.Hsqcq5e5eJb2MghbWnt_5ZRQH2FigP3WwKJmbE";
-const CLIENT_ID = "1502676468847611934";
-const SERVER_ID = "r6r5mg";
-
-// =========================
-// BOT SETUP
-// =========================
+const TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const SERVER_ID = process.env.SERVER_ID;
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds]
 });
-
-// =========================
-// REGISTER COMMANDS
-// =========================
 
 async function registerCommands() {
 
@@ -58,40 +48,14 @@ async function registerCommands() {
 
     const rest = new REST({ version: "10" }).setToken(TOKEN);
 
-    try {
+    await rest.put(
+        Routes.applicationCommands(CLIENT_ID),
+        { body: commands }
+    );
 
-        console.log("Registering slash commands...");
-
-        await rest.put(
-            Routes.applicationCommands(CLIENT_ID),
-            { body: commands }
-        );
-
-        console.log("Commands registered.");
-
-    } catch (err) {
-
-        console.error(err);
-
-    }
+    console.log("Slash commands registered.");
 
 }
-
-// =========================
-// READY EVENT
-// =========================
-
-client.once("ready", async () => {
-
-    console.log(`Logged in as ${client.user.tag}`);
-
-    await registerCommands();
-
-});
-
-// =========================
-// FETCH SERVER DATA
-// =========================
 
 async function fetchServerData() {
 
@@ -103,17 +67,21 @@ async function fetchServerData() {
 
 }
 
-// =========================
-// INTERACTIONS
-// =========================
+client.once("ready", async () => {
+
+    console.log(`Logged in as ${client.user.tag}`);
+
+    await registerCommands();
+
+    client.user.setActivity("Ceylon Roleplay", {
+        type: 3
+    });
+
+});
 
 client.on("interactionCreate", async interaction => {
 
     if (!interaction.isChatInputCommand()) return;
-
-    // =========================
-    // /PLAYERS
-    // =========================
 
     if (interaction.commandName === "players") {
 
@@ -135,7 +103,8 @@ client.on("interactionCreate", async interaction => {
 
                     return `\`${p.id}\` ${pingEmoji} **${p.name}** — ${p.ping}ms`;
 
-                }).join("\n")
+                }).join("
+")
                 : "❌ No players online";
 
             const embed = new EmbedBuilder()
@@ -172,10 +141,6 @@ client.on("interactionCreate", async interaction => {
         }
 
     }
-
-    // =========================
-    // /SERVER
-    // =========================
 
     if (interaction.commandName === "server") {
 
@@ -235,10 +200,6 @@ client.on("interactionCreate", async interaction => {
 
     }
 
-    // =========================
-    // /PLAYERINFO
-    // =========================
-
     if (interaction.commandName === "playerinfo") {
 
         await interaction.deferReply();
@@ -255,9 +216,7 @@ client.on("interactionCreate", async interaction => {
 
             if (!player) {
 
-                return interaction.editReply(
-                    "❌ Player not found."
-                );
+                return interaction.editReply("❌ Player not found.");
 
             }
 
@@ -286,17 +245,6 @@ client.on("interactionCreate", async interaction => {
                 })
                 .setTimestamp();
 
-            // Optional identifiers
-            if (player.identifiers && player.identifiers.length > 0) {
-
-                embed.addFields({
-                    name: "🔗 Identifiers",
-                    value: `\`\`\`${player.identifiers.join("\n")}\`\`\``,
-                    inline: false
-                });
-
-            }
-
             await interaction.editReply({
                 embeds: [embed]
             });
@@ -312,9 +260,5 @@ client.on("interactionCreate", async interaction => {
     }
 
 });
-
-// =========================
-// LOGIN
-// =========================
 
 client.login(TOKEN);
