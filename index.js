@@ -18,7 +18,6 @@ const client = new Client({
 const TOKEN = process.env.DISCORD_TOKEN;
 const SERVER_ID = process.env.SERVER_ID;
 const CLIENT_ID = process.env.CLIENT_ID;
-const GUILD_ID = process.env.GUILD_ID;
 
 async function registerCommands() {
 
@@ -36,7 +35,7 @@ async function registerCommands() {
         console.log("Registering slash commands...");
 
         await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+            Routes.applicationCommands(CLIENT_ID),
             { body: commands }
         );
 
@@ -78,19 +77,31 @@ client.on("interactionCreate", async interaction => {
 
             const playerText = players.length
                 ? players.map((p, i) =>
-                    `${i + 1}. ${p.name}`
+                    `\`${i + 1}.\` 🎮 ${p.name}`
                 ).join("\n")
-                : "No players online";
+                : "❌ No players online";
 
             const embed = new EmbedBuilder()
-                .setTitle(data.hostname)
-                .setDescription(playerText)
-                .addFields({
-                    name: "Players",
-                    value: `${players.length}/${data.sv_maxclients}`,
-                    inline: true
+                .setTitle("Ceylon Roleplay Server 💙")
+                .setDescription(
+                    `👥 **Online Players List**\n\n${playerText}`
+                )
+                .addFields(
+                    {
+                        name: "📊 Server Status",
+                        value: "🟢 Online",
+                        inline: true
+                    },
+                    {
+                        name: "👤 Player Count",
+                        value: `\`${players.length}/${data.sv_maxclients}\``,
+                        inline: true
+                    }
+                )
+                .setFooter({
+                    text: "Developed By • Richie"
                 })
-                .setColor(0x0099ff)
+                .setColor(0x00ff99)
                 .setTimestamp();
 
             await interaction.editReply({
@@ -102,7 +113,7 @@ client.on("interactionCreate", async interaction => {
             console.error(err);
 
             await interaction.editReply(
-                "Failed to fetch player list."
+                "❌ Failed to fetch player list."
             );
 
         }
