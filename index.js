@@ -19,8 +19,9 @@ const axios = require("axios");
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const SERVER_ID = process.env.SERVER_ID;
+const OWNER_ID = process.env.OWNER_ID;
 
-if (!TOKEN || !CLIENT_ID || !SERVER_ID) {
+if (!TOKEN || !CLIENT_ID || !SERVER_ID || !OWNER_ID) {
     console.log("❌ Missing environment variables.");
     process.exit(1);
 }
@@ -30,7 +31,10 @@ if (!TOKEN || !CLIENT_ID || !SERVER_ID) {
 // =========================
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers
+    ]
 });
 
 // =========================
@@ -57,7 +61,15 @@ async function registerCommands() {
                     .setName("id")
                     .setDescription("Player server ID")
                     .setRequired(true)
-            )
+            ),
+
+        new SlashCommandBuilder()
+            .setName("servers")
+            .setDescription("Shows all servers using the bot"),
+
+        new SlashCommandBuilder()
+            .setName("botstats")
+            .setDescription("Shows bot statistics")
 
     ].map(cmd => cmd.toJSON());
 
@@ -113,6 +125,110 @@ client.once("ready", async () => {
         type: ActivityType.Watching
     });
 
+    console.log("🌍 Servers Using Bot:");
+
+    client.guilds.cache.forEach(guild => {
+
+        console.log(
+            `${guild.name} | ${guild.memberCount} members | ID: ${guild.id}`
+        );
+
+    });
+
+});
+
+// =========================
+// BOT JOINED SERVER
+// =========================
+
+client.on("guildCreate", async (guild) => {
+
+    try {
+
+        const owner = await guild.fetchOwner().catch(() => null);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x00ff99)
+            .setTitle("✅ Bot Added To Server")
+            .setThumbnail(guild.iconURL())
+            .addFields(
+                {
+                    name: "Server",
+                    value: guild.name,
+                    inline: true
+                },
+                {
+                    name: "Members",
+                    value: `${guild.memberCount}`,
+                    inline: true
+                },
+                {
+                    name: "Server ID",
+                    value: guild.id,
+                    inline: false
+                },
+                {
+                    name: "Owner",
+                    value: owner
+                        ? owner.user.tag
+                        : "Unknown",
+                    inline: false
+                }
+            )
+            .setTimestamp();
+
+        const user = await client.users.fetch(OWNER_ID);
+
+        await user.send({
+            embeds: [embed]
+        });
+
+    } catch (err) {
+
+        console.error("Guild Create Error:", err);
+
+    }
+
+});
+
+// =========================
+// BOT REMOVED SERVER
+// =========================
+
+client.on("guildDelete", async (guild) => {
+
+    try {
+
+        const embed = new EmbedBuilder()
+            .setColor(0xff0000)
+            .setTitle("❌ Bot Removed From Server")
+            .setThumbnail(guild.iconURL())
+            .addFields(
+                {
+                    name: "Server",
+                    value: guild.name,
+                    inline: true
+                },
+                {
+                    name: "Server ID",
+                    value: guild.id,
+                    inline: true
+                }
+            )
+            .setTimestamp();
+
+        const user = await client.users.fetch(OWNER_ID);
+
+        await user.send({
+            embeds: [embed]
+        });
+
+    } catch (err) {
+
+        console.error("Guild Delete Error:", err);
+
+    }
+
 });
 
 // =========================
@@ -122,6 +238,27 @@ client.once("ready", async () => {
 client.on("interactionCreate", async interaction => {
 
     if (!interaction.isChatInputCommand()) return;
+
+    // =========================
+    // OWNER ONLY CHECK
+    // =========================
+
+    const ownerOnlyCommands = [
+        "servers",
+        "botstats"
+    ];
+
+    if (
+        ownerOnlyCommands.includes(interaction.commandName) &&
+        interaction.user.id !== OWNER_ID
+    ) {
+
+        return interaction.reply({
+            content: "❌ Owner only command.",
+            ephemeral: true
+        });
+
+    }
 
     // =========================
     // /PLAYERS
@@ -319,6 +456,80 @@ client.on("interactionCreate", async interaction => {
             );
 
         }
+
+    }
+
+    // =========================
+    // /SERVERS
+    // =========================
+
+    if (interaction.commandName === "servers") {
+
+        const servers = client.guilds.cache.map(guild => {
+
+            return (
+                `**${guild.name}**\n` +
+                `👥 Members: ${guild.memberCount}\n` +
+                `🆔 ID: ${guild.id}\n`
+            );
+
+        }).join("\n");
+
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setTitle("🌍 Servers Using Bot")
+            .setDescription(
+                servers || "No servers found."
+            )
+            .setTimestamp();
+
+        await interaction.reply({
+            embeds: [embed],
+            ephemeral: true
+        });
+
+    }
+
+    // =========================
+    // /BOTSTATS
+    // =========================
+
+    if (interaction.commandName === "botstats") {
+
+        const totalServers = client.guilds.cache.size;
+
+        const totalUsers = client.guilds.cache.reduce(
+            (acc, guild) => acc + guild.memberCount,
+            0
+        );
+
+        const embed = new EmbedBuilder()
+            .setColor(0x00ffff)
+            .setTitle("📊 Bot Statistics")
+            .addFields(
+                {
+                    name: "Servers",
+                    value: `${totalServers}`,
+                    inline: true
+                },
+                {
+                    name: "Users",
+                    value: `${totalUsers}`,
+                    inline: true
+                },
+                {
+                    name: "Ping",
+                    value: `${client.ws.ping}ms`,
+                    inline: true
+                }
+            )
+            .setThumbnail(client.user.displayAvatarURL())
+            .setTimestamp();
+
+        await interaction.reply({
+            embeds: [embed],
+            ephemeral: true
+        });
 
     }
 
