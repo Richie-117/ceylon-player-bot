@@ -51,7 +51,7 @@ async function registerCommands() {
 
         new SlashCommandBuilder()
             .setName("server")
-            .setDescription("Show server information"),
+            .setDescription("Show ceylonrp server information"),
 
         new SlashCommandBuilder()
             .setName("playerinfo")
@@ -59,7 +59,7 @@ async function registerCommands() {
             .addIntegerOption(option =>
                 option
                     .setName("id")
-                    .setDescription("Player server ID")
+                    .setDescription("Player crp server ID")
                     .setRequired(true)
             ),
 
