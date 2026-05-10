@@ -176,7 +176,7 @@ client.on("guildCreate", async (guild) => {
                 }
             )
             .setFooter({
-                    text: `Made by Richie • ${new Date().toLocaleString()}`
+                    text: `Made by Richie`
                 })
             .setTimestamp();
 
@@ -311,7 +311,7 @@ client.on("interactionCreate", async interaction => {
                     }
                 )
                 .setFooter({
-                    text: `Made by Richie • `
+                    text: `Made by Richie`
                 })
                 .setTimestamp();
 
@@ -375,7 +375,7 @@ client.on("interactionCreate", async interaction => {
                     }
                 )
                 .setFooter({
-                    text: `Made by Richie • `
+                    text: `Made by Richie`
                 })
                 .setTimestamp();
 
@@ -442,7 +442,7 @@ client.on("interactionCreate", async interaction => {
                     }
                 )
                 .setFooter({
-                        text: `Made by Richie • ${new Date().toLocaleString()}`
+                        text: `Made by Richie`
                     })
                 .setTimestamp();
 
@@ -494,7 +494,7 @@ client.on("interactionCreate", async interaction => {
                 servers || "No servers found."
             )
             .setFooter({
-                text: `Made by Richie • `
+                text: `Made by Richie`
             })
             .setTimestamp();
 
@@ -540,7 +540,7 @@ client.on("interactionCreate", async interaction => {
             )
             .setThumbnail(client.user.displayAvatarURL())
             .setFooter({
-                text: `Made by Richie • ${new Date().toLocaleString()}`
+                text: `Made by Richie`
             })
             .setTimestamp();
 
