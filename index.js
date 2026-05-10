@@ -175,6 +175,9 @@ client.on("guildCreate", async (guild) => {
                     inline: false
                 }
             )
+            .setFooter({
+                    text: `Made by Richie • ${new Date().toLocaleString()}`
+                })
             .setTimestamp();
 
         const user = await client.users.fetch(OWNER_ID);
@@ -307,6 +310,9 @@ client.on("interactionCreate", async interaction => {
                         inline: true
                     }
                 )
+                .setFooter({
+                    text: `Made by Richie • ${new Date().toLocaleString()}`
+                })
                 .setTimestamp();
 
             await interaction.editReply({
@@ -368,6 +374,9 @@ client.on("interactionCreate", async interaction => {
                         inline: false
                     }
                 )
+                .setFooter({
+                    text: `Made by Richie • ${new Date().toLocaleString()}`
+                })
                 .setTimestamp();
 
             await interaction.editReply({
@@ -432,6 +441,9 @@ client.on("interactionCreate", async interaction => {
                         inline: true
                     }
                 )
+                .setFooter({
+                        text: `Made by Richie • ${new Date().toLocaleString()}`
+                    })
                 .setTimestamp();
 
             if (player.identifiers?.length) {
@@ -481,6 +493,9 @@ client.on("interactionCreate", async interaction => {
             .setDescription(
                 servers || "No servers found."
             )
+            .setFooter({
+                text: `Made by Richie • ${new Date().toLocaleString()}`
+            })
             .setTimestamp();
 
         await interaction.reply({
@@ -524,6 +539,9 @@ client.on("interactionCreate", async interaction => {
                 }
             )
             .setThumbnail(client.user.displayAvatarURL())
+            .setFooter({
+                text: `Made by Richie • ${new Date().toLocaleString()}`
+            })
             .setTimestamp();
 
         await interaction.reply({
