@@ -324,7 +324,7 @@ client.on("interactionCreate", async interaction => {
             console.error(error);
 
             await interaction.editReply(
-                "❌ Failed to fetch players."
+                "🔴 FiveM server is currently offline or unreachable."
             );
 
         }
@@ -388,7 +388,7 @@ client.on("interactionCreate", async interaction => {
             console.error(error);
 
             await interaction.editReply(
-                "❌ Failed to fetch server information."
+                 "🔴 FiveM server is currently offline or unreachable."
             );
 
         }
@@ -464,7 +464,7 @@ client.on("interactionCreate", async interaction => {
             console.error(error);
 
             await interaction.editReply(
-                "❌ Failed to fetch player info."
+                 "🔴 FiveM server is currently offline or unreachable."
             );
 
         }
